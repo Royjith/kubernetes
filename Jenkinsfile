@@ -102,7 +102,7 @@ pipeline {
                             // Apply the updated deployment.yaml using kubectl with the specified namespace "test"
                             echo 'Applying the updated deployment.yaml to the Kubernetes cluster...'
                             sh """
-                                export KUBECONFIG=$KUBECONFIG_FILE
+                                export KUBECONFIG=${KUBECONFIG_FILE}  # No interpolation
                                 kubectl apply -f ${deploymentFile} --namespace=${NAMESPACE}
                             """
                         }
