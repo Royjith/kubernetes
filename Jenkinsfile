@@ -1,14 +1,14 @@
 pipeline {
-    agent { label 'node-1' } // Set the agent to use node-1
+     agent { label 'node-1' } // Set the agent to use node-1
 
     environment {
         DOCKER_IMAGE = 'my-app'               // Docker image name
-        DOCKER_TAG = 'latest-v1'               // Docker tag
+        DOCKER_TAG = 'latest-v16'                 // Docker tag
         DOCKER_HUB_REPO = 'royjith/pikube'    // Docker Hub repository
         DOCKER_HUB_CREDENTIALS_ID = 'dockerhub'  // Docker Hub credentials ID
-        KUBE_CONFIG = '/tmp/kubeconfig'       // Path to the kubeconfig file or use Jenkins Kubernetes plugin credentials
+        KUBE_CONFIG = '/tmp/kubeconfig'  // Path to the kubeconfig file or use Jenkins Kubernetes plugin credentials
         DEPLOYMENT_NAME = 'pipeline-deployment'
-        NAMESPACE = 'test'                    // Kubernetes namespace to deploy to
+        NAMESPACE = 'default'  // Kubernetes namespace to deploy to
     }
 
     stages {
@@ -23,7 +23,7 @@ pipeline {
             steps {
                 script {
                     // Set default tag to 'latest' if DOCKER_TAG is not defined
-                    def tag = "${DOCKER_TAG ?: 'latest-v1'}"
+                    def tag = "${DOCKER_TAG ?: 'latest-v16'}"
                     echo "Building Docker image with tag: ${tag}..."
                     // Build the Docker image with the determined tag
                     def buildResult = sh(script: "docker build -t ${DOCKER_HUB_REPO}:${tag} .", returnStatus: true)
@@ -78,6 +78,9 @@ pipeline {
         }
 
         stage('Deploy to Kubernetes') {
+           // when {
+          //     branch 'main'  // Only deploy on the 'main' branch
+          // }
             steps {
                 input message: 'Approve Kubernetes Deployment?', ok: 'Deploy'  // Manual approval before deployment
                 script {
@@ -99,10 +102,10 @@ pipeline {
                                 sed -i 's|image: .*|image: ${DOCKER_HUB_REPO}:${DOCKER_TAG}|g' ${deploymentFile}
                             """
 
-                            // Apply the updated deployment.yaml using kubectl with the specified namespace "test"
+                            // Apply the updated deployment.yaml using kubectl
                             echo 'Applying the updated deployment.yaml to the Kubernetes cluster...'
                             sh """
-                                export KUBECONFIG=${KUBECONFIG_FILE}  # No interpolation
+                                export KUBECONFIG=$KUBECONFIG_FILE
                                 kubectl apply -f ${deploymentFile} --namespace=${NAMESPACE}
                             """
                         }
