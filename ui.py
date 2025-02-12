@@ -5,7 +5,7 @@ from langchain_cohere import ChatCohere
 
 
 
-st.title("Cohere Chat Bot - v20")
+st.title("Cohere Chat Bot - v2.0")
 
 # Initialize chat history
 if "messages" not in st.session_state:
