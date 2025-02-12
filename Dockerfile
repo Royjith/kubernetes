@@ -1,32 +1,32 @@
-#FROM ghcr.io/oracle/oraclelinux8-instantclient:23doc
-FROM oraclelinux:9
-# Update the package list
-RUN dnf update -y
+# Use Alpine Linux as the base image
+FROM python:3.12-alpine
 
-# Install Python 3.12
-RUN dnf install -y python3.12 
-
-
-RUN python3.12 -m ensurepip
-##same for the every underlying os
-## Set the environment variable for Python 3.12
-ENV PATH=$PATH:/usr/local/bin/python3.12
-
-# Set the default command to run when the container is started
-# CMD ["python3.12", "-V"]
+# Set the working directory in the container
 WORKDIR /app
 
+# Copy the requirements.txt and Python files into the container
 COPY requirements.txt . 
+COPY ui.py .
 
-COPY ui.py . 
-#this is actual logic
+# Update package list and install dependencies
+RUN apk update && \
+    apk add --no-cache \
+    gcc \
+    musl-dev \
+    libffi-dev \
+    curl
 
-RUN pip3 install --no-cache-dir -r requirements.txt 
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
 
-RUN python3.12 -m pip install --upgrade pip setuptools 
+# Upgrade pip and setuptools
+RUN python3 -m pip install --upgrade pip setuptools
 
+# Expose the port the app will run on
 EXPOSE 8501 
 
-HEALTHCHECK CMD curl --fail http://localhost:8501/_stcore/health
+# Health check for the service
+HEALTHCHECK CMD curl --fail http://localhost:8501/_stcore/health || exit 1
 
-ENTRYPOINT ["streamlit", "run", "ui.py", "--server.port=8501", "--server.address=0.0.0.0"] 
+# Set the entrypoint for the container
+ENTRYPOINT ["streamlit", "run", "ui.py", "--server.port=8501", "--server.address=0.0.0.0"]
