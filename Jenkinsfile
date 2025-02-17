@@ -20,18 +20,38 @@ pipeline {
         }
 
         stage('Build Docker Image') {
-            steps {
-                script {
-                    // Set default tag to 'latest-24.0' if DOCKER_TAG is not defined
-                    def tag = "${DOCKER_TAG ?: 'latest-v24'}"
-                    echo "Building Docker image with tag: ${tag}..."
+    steps {
+        script {
+            // Set default tag to 'latest-v24' if DOCKER_TAG is not defined
+            def tag = "${DOCKER_TAG ?: 'latest-v24'}"
+            echo "Building Docker image with tag: ${tag}..."
 
-                    try {
-                        // Build the Docker image with the specified Dockerfile and no cache
-                        sh "docker build -f Dockerfile --no-cache -t ${DOCKER_HUB_REPO}:${tag} ."
-                        echo "Docker image built successfully: ${DOCKER_HUB_REPO}:${tag}"
-                    } catch (Exception e) {
-                        error "Docker build failed: ${e.message}"  // Explicitly fail if Docker build fails
+            // Ensure the Docker image build context is fresh
+            // (pull the latest code and clean up workspace if needed)
+            try {
+                // Optional: Clean up any existing images with the same name to prevent issues
+                sh """
+                    docker rmi -f ${DOCKER_HUB_REPO}:${tag} || true
+                    docker system prune -f
+                """
+
+                // Pull the latest code from the repository to ensure the latest files are used
+                // This is especially useful if you're working with Jenkins and have a Git repository
+                // Uncomment if you want to ensure the repository is up-to-date before the build
+                // git branch: 'main', url: 'https://github.com/your/repo.git'  // Replace with your repo URL
+
+                // Build the Docker image with the specified Dockerfile and no cache to avoid old layers
+                sh "docker build -f Dockerfile --no-cache -t ${DOCKER_HUB_REPO}:${tag} ."
+
+                echo "Docker image built successfully: ${DOCKER_HUB_REPO}:${tag}"
+
+            } catch (Exception e) {
+                error "Docker build failed: ${e.message}"  // Explicitly fail if Docker build fails
+            }
+        }
+    }
+}
+
                     }
                 }
             }
