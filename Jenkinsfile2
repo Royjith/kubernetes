@@ -20,28 +20,34 @@ pipeline {
         }
 
         stage('Build Docker Image') {
-            steps {
-                script {
-                    // Set default tag to 'latest-v24' if DOCKER_TAG is not defined
-                    def tag = "${DOCKER_TAG ?: 'latest-v24'}"
-                    echo "Building Docker image with tag: ${tag}..."
+    steps {
+        script {
+            // Use the static Docker tag "version-1"
+            def tag = "${DOCKER_TAG}"
+            echo "Building Docker image with tag: ${tag}..."
 
-                    // Ensure the Docker image build context is fresh
-                    // (pull the latest code and clean up workspace if needed)
-                    try {
-                        // Optional: Clean up any existing images with the same name to prevent issues
-                        sh """
-                            docker rmi -f ${DOCKER_HUB_REPO}:${tag} || true
-                            docker system prune -f
-                        """
+            try {
+                // Clean up any existing images with the same name to prevent issues
+                sh """
+                    docker rmi -f ${DOCKER_HUB_REPO}:${tag} || true
+                    docker system prune -f
+                """
 
-                        // Build the Docker image with the specified Dockerfile and no cache to avoid old layers
-                        sh "docker build -f Dockerfile --no-cache -t ${DOCKER_HUB_REPO}:${tag} ."
+                // Build the Docker image and tag it as "latest"
+                echo "Building the Docker image from Dockerfile2..."
+                sh "docker build -f Dockerfile2 --no-cache -t ${DOCKER_HUB_REPO}:latest ."
 
-                        echo "Docker image built successfully: ${DOCKER_HUB_REPO}:${tag}"
+                // Tag the image with the appropriate repository and tag
+                echo "Tagging the Docker image with tag: ${DOCKER_HUB_REPO}:${tag}..."
+                sh """
+                    IMAGE_ID=\$(docker images -q ${DOCKER_HUB_REPO}:latest)
+                    docker tag \$IMAGE_ID ${DOCKER_HUB_REPO}:${tag}
+                """
 
-                    } catch (Exception e) {
-                        error "Docker build failed: ${e.message}"  // Explicitly fail if Docker build fails
+                echo "Docker image built and tagged successfully: ${DOCKER_HUB_REPO}:${tag}"
+
+            } catch (Exception e) {
+                error "Docker build failed: ${e.message}"  // Explicitly fail if Docker build fails
                     }
                 }
             }
